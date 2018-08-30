@@ -1,7 +1,7 @@
 FROM golang:alpine
 
 RUN apk add git
-RUN go get github.com/mediocregopher/radix.v2
+RUN go get -u github.com/go-redis/redis
 
 WORKDIR /app
 

@@ -6,24 +6,27 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/mediocregopher/radix.v2/redis"
+	"github.com/go-redis/redis"
 )
 
 func main() {
-	conn, err := redis.Dial("tcp", "redis-server:6379")
+	client := redis.NewClient(&redis.Options{
+		Addr:     "redis-server:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	pong, err := client.Ping().Result()
+	fmt.Println(pong, err)
+	// Output: PONG <nil>
+
+	err = client.Set("visits", 0, 0).Err()
 	if err != nil {
 		panic(err)
 	}
 
-	defer conn.Close()
-
-	err = conn.Cmd("HMSET", "0", "visits", 0).Err
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		visits, err := conn.Cmd("HGET", "0", "visits").Str()
+		visits, err := client.Get("visits").Result()
 		if err != nil {
 			panic(err)
 		}
@@ -33,12 +36,15 @@ func main() {
 			panic(err)
 		}
 
-		err = conn.Cmd("HMSET", "0", "visits", numOfVisits+1).Err
+		err = client.Set("visits", numOfVisits+1, 0).Err()
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
-		fmt.Fprint(w, "Visits: ", numOfVisits)
+
+		fmt.Fprint(w, "Visits: ", visits)
 	})
+
+	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {})
 
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
