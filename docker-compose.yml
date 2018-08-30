@@ -1,0 +1,10 @@
+version: '3'
+services:
+  redis-server:
+    image: 'redis'
+  go-app:
+    build: .
+    links:
+      - "redis-server:rs"
+    ports: 
+      - "8080:80"
